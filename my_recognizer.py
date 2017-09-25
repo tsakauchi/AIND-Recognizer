@@ -1,5 +1,18 @@
 import warnings
+import math
 from asl_data import SinglesData
+
+
+def score_safe(model, X, lengths):
+    # Hmmlearn problem: Rows of transmat_ must sum to 1.0
+    # For some components quantity, there is not enough data.
+    # Use try/except to catch these transmat errors inside the number of components for loop.
+    # by letyrodri1
+    # https: // discussions.udacity.com / t / hmmlearn - problem - rows - of - transmat - -must - sum - to - 1 - 0 / 249602
+    try:
+        return model.score(X, lengths)
+    except:
+        return None
 
 
 def recognize(models: dict, test_set: SinglesData):
@@ -20,6 +33,20 @@ def recognize(models: dict, test_set: SinglesData):
     warnings.filterwarnings("ignore", category=DeprecationWarning)
     probabilities = []
     guesses = []
-    # TODO implement the recognizer
-    # return probabilities, guesses
-    raise NotImplementedError
+
+    for X, lengths in test_set.get_all_Xlengths().values():
+        probability = dict()
+        max_probability = -math.inf
+        max_probability_word = None
+        for word, model in models.items():
+            logL = score_safe(model, X, lengths)
+            if logL is None:
+                continue
+            probability[word] = logL
+            if logL > max_probability:
+                max_probability = logL
+                max_probability_word = word
+        probabilities.append(probability)
+        guesses.append(max_probability_word)
+
+    return probabilities, guesses
